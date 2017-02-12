@@ -41,7 +41,9 @@ or:
 _
     args => {
         files => {
-            schema => ['array*', of=>'filename*', min_len=>1, uniq=>1],
+            schema => ['array*', of=>'filename*', min_len=>1,
+                       #uniq=>1, # not yet implemented by Data::Sah
+                   ],
             req => 1,
             pos => 0,
             greedy => 1,
@@ -63,7 +65,7 @@ _
 sub remove_pdf_password {
     #require File::Temp;
     require IPC::System::Options;
-    require Proc::ChildError;
+    #require Proc::ChildError;
     #require Path::Tiny;
 
     my %args = @_;
@@ -78,7 +80,7 @@ sub remove_pdf_password {
         }
         # XXX test that tempfile doesn't yet exist. but actually we can't avoid
         # race condition because qpdf is another process
-        my $tempf = "$f.tmp".int(rand*900_000 + 100_000);
+        my $tempf = "$f.tmp" . int(rand()*900_000 + 100_000);
 
         my $decrypted;
       PASSWORD:
@@ -87,11 +89,12 @@ sub remove_pdf_password {
             IPC::System::Options::system(
                 {log => 1, capture_stdout => \$stdout, capture_stderr => \$stderr},
                 "qpdf", "--password=$p", "--decrypt", $f, $tempf);
-            my $err = $? ? Proc::ChildError::explain_child_error() : '';
-            if ($err && $err =~ /: invalid password$/) {
+            my $err = $?;# ? Proc::ChildError::explain_child_error() : '';
+            if ($err && $stderr =~ /: invalid password$/) {
                 next PASSWORD;
             } elsif ($err) {
-                $envres->add_result(500, $err, {item_id=>$f});
+                $stderr =~ s/\R//g;
+                $envres->add_result(500, $stderr, {item_id=>$f});
                 next FILE;
             }
         }
@@ -105,10 +108,10 @@ sub remove_pdf_password {
             };
         }
         unless (rename $tempf, $f) {
-            $env->add_result(500, "Can't rename $tempf to $f: $!", {item_id=>$f});
+            $envres->add_result(500, "Can't rename $tempf to $f: $!", {item_id=>$f});
             next FILE;
         }
-        $env->add_result(200, "OK", {item_id=>$f});
+        $envres->add_result(200, "OK", {item_id=>$f});
     }
 
     $envres->as_struct;
