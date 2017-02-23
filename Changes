@@ -1,3 +1,8 @@
+0.003   2017-02-23 (PERLANCAR)
+
+	- [Bugfix] Didn't check case when no passwords succeeded.
+
+
 0.002   2017-02-13 (PERLANCAR)
 
         - No functional changes.
