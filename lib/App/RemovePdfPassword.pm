@@ -91,12 +91,17 @@ sub remove_pdf_password {
                 "qpdf", "--password=$p", "--decrypt", $f, $tempf);
             my $err = $?;# ? Proc::ChildError::explain_child_error() : '';
             if ($err && $stderr =~ /: invalid password$/) {
+                unlink $tempf; # just to make sure
                 next PASSWORD;
             } elsif ($err) {
                 $stderr =~ s/\R//g;
                 $envres->add_result(500, $stderr, {item_id=>$f});
                 next FILE;
             }
+        }
+        unless (-f $tempf) {
+            $envres->add_result(412, "No passwords can be successfully used on $f", {item_id=>$f});
+            next FILE;
         }
 
       BACKUP:
